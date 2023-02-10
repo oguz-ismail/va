@@ -40,14 +40,19 @@ put_line(struct line *l) {
 }
 
 int
-main(void) {
+main(int argc, char **argv) {
 	struct line *buf;
 	size_t buf_len, buf_size;
 	size_t max_width, max_lvl;
-	char *line;
+	const char *line;
 	ssize_t raw_len;
 	size_t len, width, lvl;
 	size_t i, j;
+
+	if (argc > 1) {
+		fprintf(stderr, "%s: extra operand: %s\n", argv[0], argv[1]);
+		return 1;
+	}
 
 	buf = malloc(sizeof buf[0]);
 	if (buf == NULL) {
@@ -128,19 +133,24 @@ main(void) {
 			}
 		}
 
-		while (max_width % TABSTOP != 0)
-			max_width++;
+		if (buf_len == 1) {
+			fputs(buf[0].ptr, stdout);
+		}
+		else {
+			while (max_width % TABSTOP != 0)
+				max_width++;
 
-		for (i = 0; i < buf_len; i++) {
-			put_line(&buf[i]);
+			for (i = 0; i < buf_len; i++) {
+				put_line(&buf[i]);
 
-			for (j = buf[i].width; j < max_width; j++)
-				putchar(' ');
+				for (j = buf[i].width; j < max_width; j++)
+					putchar(' ');
 
-			for (j = buf[i].lvl; j < max_lvl; j++)
-				putchar('\t');
+				for (j = buf[i].lvl; j < max_lvl; j++)
+					putchar('\t');
 
-			fputs(" \\\n", stdout);
+				fputs(" \\\n", stdout);
+			}
 		}
 
 		if (raw_len > 0)
