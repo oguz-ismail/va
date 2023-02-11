@@ -15,14 +15,14 @@ struct line {
 #define IS_BYTE1(c) ((c & 0xC0) != 0x80)
 
 static size_t
-next_tabstop(size_t i) {
-	size_t n;
+next_tabstop(size_t pos) {
+	size_t off;
 
-	n = i % TABSTOP;
-	if (n == 0)
-		return i;
+	off = pos % TABSTOP;
+	if (off == 0)
+		return pos;
 	else
-		return i + (TABSTOP - n);
+		return pos + (TABSTOP - off);
 }
 
 static ssize_t
@@ -32,22 +32,23 @@ get_line(struct line *l) {
 
 static void
 put_line(struct line *l) {
-	size_t i, j, k;
+	size_t i;
+	size_t off, stop;
 
 	for (i = 0; i < l->lvl; i++)
 		putchar(l->ptr[i]);
 	
-	j = 0;
+	off = 0;
 	for (; i < l->len; i++)
 		if (l->ptr[i] == '\t') {
-			k = next_tabstop(j + 1);
-			for (; j < k; j++)
+			stop = next_tabstop(off + 1);
+			for (; off < stop; off++)
 				putchar(' ');
 		}
 		else {
 			putchar(l->ptr[i]);
 			if (IS_BYTE1(l->ptr[i]))
-				j++;
+				off++;
 		}
 }
 
