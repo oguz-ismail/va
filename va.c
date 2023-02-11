@@ -57,6 +57,7 @@ main(int argc, char **argv) {
 	struct line *buf;
 	size_t buf_len, buf_size;
 	size_t max_width, max_lvl, min_lvl;
+	int pad;
 	const char *line;
 	ssize_t raw_len;
 	size_t len, width, lvl;
@@ -82,6 +83,7 @@ main(int argc, char **argv) {
 		max_width = 0;
 		max_lvl = 0;
 		min_lvl = SIZE_MAX;
+		pad = 0;
 
 		while ((raw_len = get_line(&buf[buf_len])) > 0) {
 			line = buf[buf_len].ptr;
@@ -118,8 +120,13 @@ main(int argc, char **argv) {
 				else if (IS_BYTE1(line[i]))
 					width++;
 
-			if (width > max_width)
+
+			if (width > max_width) {
 				max_width = width;
+
+				if (lvl >= max_lvl)
+					pad = (width % TABSTOP == 0);
+			}
 
 			if (lvl > max_lvl)
 				max_lvl = lvl;
@@ -150,9 +157,11 @@ main(int argc, char **argv) {
 		if (buf_len == 1) {
 			fputs(buf[0].ptr, stdout);
 		}
-		else {
+		else if (buf_len > 1) {
 			if (max_lvl > min_lvl)
 				max_width = next_tabstop(max_width);
+			else
+				pad = 1;
 
 			for (i = 0; i < buf_len; i++) {
 				put_line(&buf[i]);
@@ -163,7 +172,10 @@ main(int argc, char **argv) {
 				for (j = buf[i].lvl; j < max_lvl; j++)
 					putchar('\t');
 
-				fputs(" \\\n", stdout);
+				if (pad)
+					putchar(' ');
+
+				fputs("\\\n", stdout);
 			}
 		}
 

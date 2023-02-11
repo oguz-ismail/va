@@ -50,15 +50,15 @@ run_test a normal line
 
 input='x\\\n\tx\\\n'
 arguments=
-expected_output='x       \t \\\n\tx        \\\n'
+expected_output='x       \t\\\n\tx       \\\n'
 expected_status=0
 run_test a couple of continued lines with different levels
 
 input='xxxxxxxxx\\\n\tx\\\n'
 arguments=
-expected_output='xxxxxxxxx       \t \\\n\tx                \\\n'
+expected_output='xxxxxxxxx       \t\\\n\tx               \\\n'
 expected_status=0
-run_test a couple of continued lines with different levels and different lengths
+run_test a couple of continued lines with different levels and different widths
 
 input='x\\\n'
 arguments=
@@ -71,3 +71,9 @@ arguments=
 expected_output='x  \\\nxx \\\n'
 expected_status=0
 run_test a couple of continued lines with the same level
+
+input='\txxxxxxxx\\\nx\\\n'
+arguments=
+expected_output='\txxxxxxxx \\\nx       \t \\\n'
+expected_status=0
+run_test a continued line with greater level and width than the rest
