@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -11,6 +12,19 @@ struct line {
 	size_t lvl;
 };
 
+#define IS_BYTE1(c) ((c & 0xC0) != 0x80)
+
+static size_t
+next_tabstop(size_t i) {
+	size_t n;
+
+	n = i % TABSTOP;
+	if (n == 0)
+		return i;
+	else
+		return i + (TABSTOP - n);
+}
+
 static ssize_t
 get_line(struct line *l) {
 	return getline(&l->ptr, &l->size, stdin);
@@ -18,7 +32,7 @@ get_line(struct line *l) {
 
 static void
 put_line(struct line *l) {
-	size_t i, j;
+	size_t i, j, k;
 
 	for (i = 0; i < l->lvl; i++)
 		putchar(l->ptr[i]);
@@ -26,15 +40,13 @@ put_line(struct line *l) {
 	j = 0;
 	for (; i < l->len; i++)
 		if (l->ptr[i] == '\t') {
-			do {
+			k = next_tabstop(j + 1);
+			for (; j < k; j++)
 				putchar(' ');
-				j++;
-			}
-			while (j % TABSTOP != 0);
 		}
 		else {
 			putchar(l->ptr[i]);
-			if ((l->ptr[i] & 0xC0) != 0x80)
+			if (IS_BYTE1(l->ptr[i]))
 				j++;
 		}
 }
@@ -43,7 +55,7 @@ int
 main(int argc, char **argv) {
 	struct line *buf;
 	size_t buf_len, buf_size;
-	size_t max_width, max_lvl;
+	size_t max_width, max_lvl, min_lvl;
 	const char *line;
 	ssize_t raw_len;
 	size_t len, width, lvl;
@@ -68,6 +80,7 @@ main(int argc, char **argv) {
 		buf_len = 0;
 		max_width = 0;
 		max_lvl = 0;
+		min_lvl = SIZE_MAX;
 
 		while ((raw_len = get_line(&buf[buf_len])) > 0) {
 			line = buf[buf_len].ptr;
@@ -100,18 +113,18 @@ main(int argc, char **argv) {
 
 			for (; i < len; i++)
 				if (line[i] == '\t')
-					do
-						width++;
-					while (width % TABSTOP != 0);
-				else
-					if ((line[i] & 0xC0) != 0x80)
-						width++;
+					width = next_tabstop(width + 1);
+				else if (IS_BYTE1(line[i]))
+					width++;
 
 			if (width > max_width)
 				max_width = width;
 
 			if (lvl > max_lvl)
 				max_lvl = lvl;
+
+			if (lvl < min_lvl)
+				min_lvl = lvl;
 
 			buf[buf_len].len = len;
 			buf[buf_len].width = width;
@@ -137,8 +150,8 @@ main(int argc, char **argv) {
 			fputs(buf[0].ptr, stdout);
 		}
 		else {
-			while (max_width % TABSTOP != 0)
-				max_width++;
+			if (max_lvl > min_lvl)
+				max_width = next_tabstop(max_width);
 
 			for (i = 0; i < buf_len; i++) {
 				put_line(&buf[i]);
