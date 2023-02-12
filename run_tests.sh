@@ -46,23 +46,41 @@ input='x\n'
 arguments=
 expected_output=$input
 expected_status=0
-run_test a normal line
+run_test an ordinary line
+
+input='x'
+arguments=
+expected_output=$input
+expected_status=0
+run_test end of file as end of line
+
+input='x\\\\\n'
+arguments=
+expected_output=$input
+expected_status=0
+run_test an escaped trailing backslash
+
+input='x\\\n\t \t\\\n'
+arguments=
+expected_output='x \\\n  \\\n'
+expected_status=0
+run_test a continued line consisting of spaces and tabs only
 
 input='x\\\n\tx\\\n'
 arguments=
 expected_output='x       \t\\\n\tx       \\\n'
 expected_status=0
-run_test a couple of continued lines with different levels
+run_test a pair of continued lines with different levels
 
 input='xxxxxxxxx\\\n\tx\\\n'
 arguments=
 expected_output='xxxxxxxxx       \t\\\n\tx               \\\n'
 expected_status=0
-run_test a couple of continued lines with different levels and different widths
+run_test a pair of continued lines with different levels and widths
 
 input='x\\\n'
 arguments=
-expected_output='x\\\n'
+expected_output=$input
 expected_status=0
 run_test a single continued line
 
