@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define TABSTOP 8
 
@@ -31,13 +32,13 @@ get_line(struct line *l) {
 }
 
 static void
-put_line(struct line *l) {
+put_line(struct line *l, size_t width, size_t lvl, int pad) {
 	size_t i;
 	size_t off, stop;
 
 	for (i = 0; i < l->lvl; i++)
 		putchar(l->ptr[i]);
-	
+
 	off = 0;
 	for (; i < l->len; i++)
 		if (l->ptr[i] == '\t') {
@@ -50,6 +51,43 @@ put_line(struct line *l) {
 			if (IS_BYTE1(l->ptr[i]))
 				off++;
 		}
+
+	for (i = l->width; i < width; i++)
+		putchar(' ');
+
+	for (i = l->lvl; i < lvl; i++)
+		putchar('\t');
+
+	if (pad)
+		putchar(' ');
+
+	fputs("\\\n", stdout);
+}
+
+static int
+extend_buffer(struct line **buf_ptr, size_t *size) {
+	size_t old_size, new_size;
+	struct line *buf;
+	size_t i;
+
+	old_size = *size;
+	if (old_size == 0)
+		new_size = 1;
+	else
+		new_size = old_size * 2;
+
+	buf = realloc(*buf_ptr, new_size * sizeof buf[0]);
+	if (buf == NULL)
+		return 0;
+
+	for (i = old_size; i < new_size; i++) {
+		buf[i].ptr = NULL;
+		buf[i].size = 0;
+	}
+
+	*buf_ptr = buf;
+	*size = new_size;
+	return 1;
 }
 
 int
@@ -61,22 +99,20 @@ main(int argc, char **argv) {
 	const char *line;
 	ssize_t raw_len;
 	size_t len, width, lvl;
-	size_t i, j;
+	size_t i;
 
 	if (argc > 1) {
 		fprintf(stderr, "%s: extra operand: %s\n", argv[0], argv[1]);
 		return 1;
 	}
 
-	buf = malloc(sizeof buf[0]);
-	if (buf == NULL) {
+	buf = NULL;
+	buf_size = 0;
+
+	if (!extend_buffer(&buf, &buf_size)) {
 		perror(NULL);
 		return 1;
 	}
-
-	buf_size = 1;
-	buf[0].ptr = NULL;
-	buf[0].size = 0;
 
 	do {
 		buf_len = 0;
@@ -102,7 +138,7 @@ main(int argc, char **argv) {
 			len--;
 
 			for (i = 1; i <= len; i++)
-				if (line[len - i] != ' ' && line[len - i] != '\t')
+				if (memchr(" \t", line[len - i], 2) == NULL)
 					break;
 
 			len = (len - i) + 1;
@@ -137,21 +173,13 @@ main(int argc, char **argv) {
 			buf[buf_len].len = len;
 			buf[buf_len].width = width;
 			buf[buf_len].lvl = lvl;
-			buf_len++;
 
-			if (buf_len >= buf_size) {
-				buf_size *= 2;
-				buf = realloc(buf, buf_size * sizeof buf[0]);
-				if (buf == NULL) {
+			buf_len++;
+			if (buf_len >= buf_size)
+				if (!extend_buffer(&buf, &buf_size)) {
 					perror(NULL);
 					return 1;
 				}
-
-				for (i = buf_len; i < buf_size; i++) {
-					buf[i].ptr = NULL;
-					buf[i].size = 0;
-				}
-			}
 		}
 
 		if (buf_len == 1) {
@@ -163,20 +191,8 @@ main(int argc, char **argv) {
 			else
 				pad = 1;
 
-			for (i = 0; i < buf_len; i++) {
-				put_line(&buf[i]);
-
-				for (j = buf[i].width; j < max_width; j++)
-					putchar(' ');
-
-				for (j = buf[i].lvl; j < max_lvl; j++)
-					putchar('\t');
-
-				if (pad)
-					putchar(' ');
-
-				fputs("\\\n", stdout);
-			}
+			for (i = 0; i < buf_len; i++)
+				put_line(&buf[i], max_width, max_lvl, pad);
 		}
 
 		if (raw_len > 0)
