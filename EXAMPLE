@@ -1,0 +1,18 @@
+$ cat foo.h
+#define INNERMUL \
+	do { pstm_word t; \
+		t = ((pstm_word)_c[0] + (pstm_word)cy) + \
+			(((pstm_word)mu) * ((pstm_word)*tmpm++)); \
+		_c[0] = (pstm_digit)t; \
+		cy = (pstm_digit)(t >> DIGIT_BIT); \
+	} while (0)
+$ 
+$ cat foo.h | va
+#define INNERMUL                                			\
+	do { pstm_word t;                               		\
+		t = ((pstm_word)_c[0] + (pstm_word)cy) +        	\
+			(((pstm_word)mu) * ((pstm_word)*tmpm++));       \
+		_c[0] = (pstm_digit)t;                          	\
+		cy = (pstm_digit)(t >> DIGIT_BIT);              	\
+	} while (0)
+$ 
