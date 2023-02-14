@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +13,8 @@ struct line {
 	size_t width;
 	size_t lvl;
 };
+
+static int getline_err;
 
 #define IS_BYTE1(c) ((c & 0xC0) != 0x80)
 
@@ -28,7 +31,12 @@ next_tabstop(size_t pos) {
 
 static ssize_t
 get_line(struct line *l) {
-	return getline(&l->ptr, &l->size, stdin);
+	ssize_t ret;
+
+	errno = 0;
+	ret = getline(&l->ptr, &l->size, stdin);
+	getline_err = errno;
+	return ret;
 }
 
 static void
@@ -202,6 +210,12 @@ main(int argc, char **argv) {
 
 	if (ferror(stdin)) {
 		perror("stdin");
+		return 1;
+	}
+
+	if (getline_err) {
+		errno = getline_err;
+		perror(NULL);
 		return 1;
 	}
 }
