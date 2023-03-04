@@ -1,7 +1,37 @@
+# vim: fdm=marker
+# {{{
+escape_for_printf() {
+	eval "tmp=\$$1"
+	
+	case $tmp in
+	-* )
+		tmp="\055${tmp#-}"
+	esac
+
+	case $tmp in
+	*%* )
+		tmp=$(printf '%sx\n' "$tmp" | sed 's/%/%%/g')
+		tmp=${tmp%x}
+	esac
+
+	eval "$1=\$tmp"
+}
+
+build_expected_result() {
+	escape_for_printf expected_output
+	printf "${expected_output}x%d\n" "$expected_status"
+}
+
+run_scenario() {
+	escape_for_printf input
+	printf "$input" | eval "$environment ./va $arguments"
+	printf 'x%s\n' $?
+}
+
 run_test() {
 	printf 'testing if %s is handled correctly... ' "$*"
 
-	expected_result=$(get_expected_result | od)
+	expected_result=$(build_expected_result | od)
 	result=$(run_scenario | od)
 
 	if test "$result" = "$expected_result"; then
@@ -11,28 +41,7 @@ run_test() {
 		exit 1
 	fi
 }
-
-get_expected_result() {
-	escape_for_printf expected_output
-	printf "${expected_output}x%d\n" "$expected_status"
-}
-
-run_scenario() {
-	escape_for_printf input
-	printf "$input" | eval "$environment ./va $arguments"
-	printf 'x%d\n' $?
-}
-
-escape_for_printf() {
-	eval "case \$$1 in -*)
-		$1=\"\\055\${$1#-}\"
-	esac
-
-	case \$$1 in *%*)
-		$1=\$(printf '%sx\n' \"\$$1\" | sed 's/%/%%/g')
-		$1=\${$1%x}
-	esac"
-}
+# }}}
 
 environment=
 
