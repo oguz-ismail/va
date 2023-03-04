@@ -6,6 +6,8 @@
 
 #define TABSTOP 8
 
+#define UTF8_BYTE_ONE(c) ((c & 0xC0) != 0x80)
+
 struct line {
 	char *ptr;
 	size_t size;
@@ -13,10 +15,6 @@ struct line {
 	size_t width;
 	size_t lvl;
 };
-
-static int getline_err;
-
-#define IS_BYTE1(c) ((c & 0xC0) != 0x80)
 
 static size_t
 next_tabstop(size_t pos) {
@@ -28,6 +26,8 @@ next_tabstop(size_t pos) {
 	else
 		return pos + (TABSTOP - off);
 }
+
+static int getline_err;
 
 static ssize_t
 get_line(struct line *l) {
@@ -56,7 +56,7 @@ put_line(struct line *l, size_t width, size_t lvl, int pad) {
 		}
 		else {
 			putchar(l->ptr[i]);
-			if (IS_BYTE1(l->ptr[i]))
+			if (UTF8_BYTE_ONE(l->ptr[i]))
 				off++;
 		}
 
@@ -72,7 +72,7 @@ put_line(struct line *l, size_t width, size_t lvl, int pad) {
 	fputs("\\\n", stdout);
 }
 
-static int
+static void
 extend_buffer(struct line **buf_ptr, size_t *size) {
 	size_t old_size, new_size;
 	struct line *buf;
@@ -85,8 +85,10 @@ extend_buffer(struct line **buf_ptr, size_t *size) {
 		new_size = old_size * 2;
 
 	buf = realloc(*buf_ptr, new_size * sizeof buf[0]);
-	if (buf == NULL)
-		return 0;
+	if (buf == NULL) {
+		perror(NULL);
+		exit(1);
+	}
 
 	for (i = old_size; i < new_size; i++) {
 		buf[i].ptr = NULL;
@@ -95,7 +97,6 @@ extend_buffer(struct line **buf_ptr, size_t *size) {
 
 	*buf_ptr = buf;
 	*size = new_size;
-	return 1;
 }
 
 int
@@ -116,11 +117,7 @@ main(int argc, char **argv) {
 
 	buf = NULL;
 	buf_size = 0;
-
-	if (!extend_buffer(&buf, &buf_size)) {
-		perror(NULL);
-		return 1;
-	}
+	extend_buffer(&buf, &buf_size);
 
 	do {
 		buf_len = 0;
@@ -161,7 +158,7 @@ main(int argc, char **argv) {
 			for (; i < len; i++)
 				if (line[i] == '\t')
 					width = next_tabstop(width + 1);
-				else if (IS_BYTE1(line[i]))
+				else if (UTF8_BYTE_ONE(line[i]))
 					width++;
 
 
@@ -184,10 +181,7 @@ main(int argc, char **argv) {
 
 			buf_len++;
 			if (buf_len >= buf_size)
-				if (!extend_buffer(&buf, &buf_size)) {
-					perror(NULL);
-					return 1;
-				}
+				extend_buffer(&buf, &buf_size);
 		}
 
 		if (buf_len == 1) {
